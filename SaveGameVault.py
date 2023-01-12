@@ -5,14 +5,22 @@ from utils.funcs import *
 
 gauth = GoogleAuth()
 gauth.LocalWebserverAuth()
-
 drive = GoogleDrive(gauth)
 
-print("Testing the existence of folders:")
-print("Does the Testing folder exist?")
-print (FolderExists(drive, "Testing"))
-print("Does a bogus folder exist?")
-print(FolderExists(drive, "bogus"))
-print("What if we create the bogus folder?")
-CreateFolder(drive, "bogus")
-print(FolderExists(drive, "bogus"))
+# FLOW: 
+# - Check if the target folder exists. If not, create it.
+# - Check for the index file on target folder. If does not exist, create a default (blank) file.
+# - Display information from index file on screen
+
+target_folder = "Save Game Vault"
+target_exists = FolderExists(drive, target_folder)
+
+if not target_exists:
+    print("Target folder '{}' does not exist.".format(target_folder))
+    print("Creating folder.")
+    created = CreateFolder(drive, target_folder)
+    if not created:
+        print("Could not create folder.")
+        print("Exiting.")
+
+
