@@ -16,8 +16,7 @@ class MainIndex:
         self.games = {}
         folder_list = GetFolderList(self.drive, folder['id'])
         for game in folder_list:
-            g = self.IndexedGame(self.drive, game)
-            self.games.append(g)
+            self.games[game['title']] = self.IndexedGame(self.drive, game)
             
 
     def Update(self, target_folder : GoogleDriveFile = None) -> bool :
@@ -27,6 +26,7 @@ class MainIndex:
                 target_folder = CreateFolder(self.drive, vault_folder)
         self.PopulateIndexedGames(target_folder)
         
+        
 
     class IndexedGame():
         # An object representing one of the Save Game folders. MainIndex holds a list of these.
@@ -34,9 +34,8 @@ class MainIndex:
             if (folder['mimeType'] != 'application/vnd.google-apps.folder'):
                 raise Exception("Cannot create an Index based on a single file.") # TODO: better exception
             self.meta = {}
-            self.saves = {}
             self.title = folder['title']
-            folders = GetFolderList(drive, folder['id'])
+            self.folders = GetFolderList(drive, folder['id'])
 
         
     
