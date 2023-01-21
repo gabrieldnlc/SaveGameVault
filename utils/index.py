@@ -1,10 +1,11 @@
 # reminder: set the remove_bom parameter in GetContentString()
 
 from pydrive2.drive import GoogleDrive
-from pydrive2.files import FileNotUploadedError, ApiRequestError
+from pydrive2.files import FileNotUploadedError, FileNotDownloadableError
 
 from .funcs import *
 from .consts import *
+from .saveunit import *
 
 class MainIndex: 
     # An object representing the Drive folders for the UI
@@ -39,8 +40,8 @@ class MainIndex:
             if (not file):
                 raise FileNotUploadedError("Metadata file does not exist.")
             if (len(file) > 1):
-                raise ApiRequestError("There is more than one metadata file.")
-            return file
+                raise FileNotDownloadableError("There is more than one metadata file.")
+            return file[0]
 
         def __init__(self, drive: GoogleDrive, folder: GoogleDriveFile):
             if (folder['mimeType'] != mime_folder):
@@ -53,8 +54,13 @@ class MainIndex:
             try:
                 metadata = self.GetMetadata(drive, folder['id'])
                 print(f"Found metadata file for {folder['title']}")
-            except Exception as err: # TODO: better exception handling
-                print(f"Error: {''.join(err.args)}")
+                self.meta = JsonToUnit(metadata.GetContentString(remove_bom=True), SaveUnit)
+            except FileNotUploadedError as err:
+                print(f"Error: {''.join(err.args)}. Execution continues.")
+                # TODO creating the .metadata file
+            except FileNotDownloadableError as err:
+                print(f"Error: {''.join(err.args)}. Needs human input.")
+                # TODO the human input
 
         
             

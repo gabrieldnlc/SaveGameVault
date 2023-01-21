@@ -9,6 +9,8 @@ class SaveUnit:
         self.files = files # Key = name (e.g. 'savestate file'); Value = file extension
 
 class NewVegasSave(SaveUnit):
+    """Test class"""
+    
     def __init__(self):
         super().__init__("Fallout New Vegas", {'raw data' : 'fos', 'backup' : '.fos.bak', 'nvse file (modding)' : '.nvse'})
 
