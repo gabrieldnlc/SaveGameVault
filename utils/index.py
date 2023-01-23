@@ -3,7 +3,7 @@
 from pydrive2.drive import GoogleDrive
 from pydrive2.files import FileNotUploadedError, FileNotDownloadableError
 
-from .funcs import *
+from .helpers import *
 from .consts import *
 from .saveunit import *
 
@@ -53,13 +53,13 @@ class MainIndex:
             # does it have the .metadata file?
             try:
                 metadata = self.GetMetadata(drive, folder['id'])
-                print(f"Found metadata file for {folder['title']}")
-                self.meta = JsonToUnit(metadata.GetContentString(remove_bom=True), SaveUnit)
+                print(f"Found metadata file for {self.title}")
+                self.meta = jsonToUnit(metadata.GetContentString(remove_bom=True), SaveUnit)
             except FileNotUploadedError as err:
-                print(f"Error: {''.join(err.args)}. Execution continues.")
+                print(f"Could not find metadata for {self.title}.")
                 # TODO creating the .metadata file
             except FileNotDownloadableError as err:
-                print(f"Error: {''.join(err.args)}. Needs human input.")
+                print(f"{self.title} has more than one metadata file. Needs human input.")
                 # TODO the human input
 
         
