@@ -14,7 +14,7 @@ class NewVegasSave(SaveUnit):
     def __init__(self):
         super().__init__("Fallout New Vegas", {'raw data' : 'fos', 'backup' : '.fos.bak', 'nvse file (modding)' : '.nvse'})
 
-def UnitToJson(unit : SaveUnit) -> str:
+def unitToJson(unit : SaveUnit) -> str:
     return jsons.dumps(unit)
 
 def jsonToUnit(json : str, cls : type) -> SaveUnit:
