@@ -17,5 +17,5 @@ class NewVegasSave(SaveUnit):
 def unitToJson(unit : SaveUnit) -> str:
     return jsons.dumps(unit)
 
-def jsonToUnit(json : str, cls : type) -> SaveUnit:
+def json_to_unit(json : str, cls : type) -> SaveUnit:
     return jsons.loads(json, cls)
