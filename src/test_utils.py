@@ -1,6 +1,6 @@
 import unittest
 from os import getcwd
-from file_management import *
+from utils.file_management import *
 
 class TestFileManagement(unittest.TestCase):
 
@@ -11,7 +11,6 @@ class TestFileManagement(unittest.TestCase):
         this_file = Path(__file__)
         self.assertTrue(this_file.exists(), "Could not create a valid Path instance via the __file__ variable")
         
-
         """You can only create a LocalFolder instance with a valid existing folder, not files."""
         LocalFolder(curr_folder) # Should not raise any errors
         self.assertRaises(FileNotFoundError, LocalFolder, not_folder)

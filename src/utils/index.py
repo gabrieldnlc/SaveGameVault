@@ -3,9 +3,9 @@
 from pydrive2.drive import GoogleDrive
 from pydrive2.files import FileNotUploadedError, FileNotDownloadableError
 
-from .helpers import *
-from .consts import *
-from .saveunit import *
+from utils.helpers import *
+from utils.consts import *
+from utils.saveunit import *
 
 class MainIndex: 
     # An object representing the Drive folders for the UI
