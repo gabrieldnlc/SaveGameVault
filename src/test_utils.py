@@ -14,7 +14,7 @@ class TestFileManagement(unittest.TestCase):
         """You can only create a LocalFolder instance with a valid existing folder, not files."""
         LocalFolder(curr_folder) # Should not raise any errors
         self.assertRaises(FileNotFoundError, LocalFolder, not_folder)
-        self.assertRaises(NotADirectoryError, LocalFolder, this_file)
+        self.assertRaises(NotADirectoryError, LocalFolder, this_file)        
 
         """Similarly, a LocalFile instance can only be created with a valid existing file, not folders."""
         LocalFile(this_file)
