@@ -1,8 +1,8 @@
 import unittest
 from os import getcwd
-from utils.file_management import *
+from utils.local_files import *
 
-class TestFileManagement(unittest.TestCase):
+class TestLocalFiles(unittest.TestCase):
 
     def test_exceptions(self):
         curr_folder = Path(getcwd()) # We can only be certain that it is a folder, but that's enough for the testing at hand.

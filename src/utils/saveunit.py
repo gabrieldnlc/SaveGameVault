@@ -1,12 +1,12 @@
-# A SaveModel is what constitutes one "Savegame Unit",
-# e.g. A SNES emulator can load a Savestate (one raw data file, one screenshot) or a Battery save (only a raw data file)
-
 import jsons
 
 class SaveUnit:
+    """A SaveModel is what constitutes one "Savegame Unit",
+       e.g. A SNES emulator can load a Savestate (one raw data file, one screenshot) or a Battery save (only a raw data file)."""
     def __init__(self, name, files = {}):
         self.name = name
-        self.files = files # Key = name (e.g. 'savestate file'); Value = file extension
+        self.files = files
+        """Key = name (e.g. 'savestate file'); Value = file extension"""
 
 class NewVegasSave(SaveUnit):
     """Test class"""
