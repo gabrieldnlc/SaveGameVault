@@ -1,5 +1,5 @@
-vault_folder_name = "Save Game Vault"
-mime_folder = 'application/vnd.google-apps.folder'
-mime_plaintext = 'text/plain'
-mime_metadata = 'application/octet-stream'
-title_metadata = '.metadata'
+VAULT_FOLDER_NAME = "Save Game Vault"
+MIME_FOLDER = 'application/vnd.google-apps.folder'
+MIME_PLAINTEXT = 'text/plain'
+MIME_METADATA = 'application/octet-stream'
+TITLE_METADATA = '.metadata'

@@ -12,11 +12,11 @@ class FileManager():
         return self.drive.ListFile({'q': query }).GetList()
     
     def list_files(self) -> list:
-        query = f"'{self.curr_folder_id}' in parents and mimeType !='{mime_folder}' and trashed=false"
+        query = f"'{self.curr_folder_id}' in parents and mimeType !='{MIME_FOLDER}' and trashed=false"
         return self.drive.ListFile({'q': query }).GetList()
 
     def list_folders(self) -> list:
-        query = f"'{self.curr_folder_id}' in parents and mimeType='{mime_folder}' and trashed=false"
+        query = f"'{self.curr_folder_id}' in parents and mimeType='{MIME_FOLDER}' and trashed=false"
         return self.drive.ListFile({'q': query }).GetList()
     
     def print_list_folders(self):
@@ -30,7 +30,7 @@ class FileManager():
             folder = self.drive.CreateFile({
             'title': folder_name, 
             "parents":  [{"id": self.curr_folder_id}], 
-            "mimeType": mime_folder
+            "mimeType": MIME_FOLDER
             })
             folder.Upload()
             return folder
@@ -71,9 +71,9 @@ class FileManager():
         query = f"'{folder_id}' in parents and trashed=false"
         if not (list_files and list_folders):
             if not list_files:
-                query += f"and mimeType='{mime_folder}'"
+                query += f"and mimeType='{MIME_FOLDER}'"
             else:
-                query += f"and mimeType!='{mime_folder}'"
+                query += f"and mimeType!='{MIME_FOLDER}'"
 
         file_list = self.drive.ListFile({'q': query }).GetList()
         if (len(file_list) == 0):
