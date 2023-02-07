@@ -2,7 +2,6 @@
 from pydrive2.auth import GoogleAuth
 from pydrive2.drive import GoogleDrive
 
-from utils.helpers import *
 from utils.index import MainIndex
 
 if __name__ == "__main__":

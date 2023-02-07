@@ -3,7 +3,8 @@ import jsons
 from utils.local_files import LocalFile, LocalFolder
 
 class FolderMetadata:
-    """The collection of files' metadata from a local folder. Meant to be written to a metadata (text) file, inside a Drive folder.
+    """The collection of files' metadata from a local folder. 
+    Meant to be written to a metadata (text) file, inside a Drive folder.
     Drive changes some of the file's metadata on upload, making this a necessity."""
     def __init__(self, folder : LocalFolder):
         self.files = {}

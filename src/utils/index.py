@@ -1,67 +1,55 @@
 # reminder: set the remove_bom parameter in GetContentString()
 
-from pydrive2.drive import GoogleDrive
+from pydrive2.drive import GoogleDrive, GoogleDriveFile
 from pydrive2.files import FileNotUploadedError, FileNotDownloadableError
 
-from utils.helpers import *
-from utils.consts import *
-from utils.saveunit import *
+from .consts import *
+from .saveunit import *
+from .drive_IO import FileManager
 
 class MainIndex:
     """An object representing the Drive folders for the UI""" 
      
     def __init__(self, drive : GoogleDrive):
         self.games = {}
-        self.drive = drive
-        self._update()
+        self.file_manager = FileManager(drive)
+        self._first_run()
+  
+    def _first_run(self) -> bool :
+        """First run configurations. 
+        Checks for (and creates, if necessary)
+        the SaveGameVault folder, setting it as the working directory."""
 
+        vault_folder = self.file_manager.get_folder(vault_folder_name)
+        if (not vault_folder):
+            print(f"Creating folder '{vault_folder_name} in ID '{self.file_manager.curr_folder_id}'.")
+            vault_folder = self.file_manager.create_folder(vault_folder_name)
+            if (not vault_folder):
+                # TODO more expressive error
+                raise RuntimeError(f"Could not create '{vault_folder_name}' folder.")
         
-    def _populate_indexed_games(self, folder : GoogleDriveFile):
+        moved = self.file_manager.go_down_a_level(vault_folder_name)
+        if (not moved):
+            raise RuntimeError(f"Could not access '{vault_folder_name}' folder.")
+        
+        # POPULATING THE GAMES INDEX:
         self.games = {}
-        folder_list = get_folder_list(self.drive, folder['id'])
-        for game in folder_list:
-            self.games[game['title']] = self.IndexedGame(self.drive, game)
-            
-
-    def _update(self, target_folder : GoogleDriveFile = None) -> bool :
-        if (target_folder == None):
-            target_folder = get_folder(self.drive, vault_folder)
-            if (not target_folder):
-                target_folder = create_folder(self.drive, vault_folder)
-        self._populate_indexed_games(target_folder)
+        game_folders = self.file_manager.list_folders()
+        for game in game_folders:
+            self.games[game['title']] = self.IndexedGame(game)
+        "baba booey"
         
+    
+    class IndexedGame:
+        def __init__(self, drive_folder : GoogleDriveFile):
+            self.folder = drive_folder
 
-    class IndexedGame():
-        """An object representing one of the Save Game folders. MainIndex holds a list of these."""
-
-        @staticmethod
-        def get_metadata(drive: GoogleDrive, parent_id: str) -> GoogleDriveFile:
-            file = get_file_matches(drive, title_metadata, parent_id)
-            if (not file):
-                raise FileNotUploadedError("Metadata file does not exist.")
-            if (len(file) > 1):
-                raise FileNotDownloadableError("There is more than one metadata file.")
-            return file[0]
-
-        def __init__(self, drive: GoogleDrive, folder: GoogleDriveFile):
-            if (folder['mimeType'] != mime_folder):
-                raise Exception("Index can only be created based on a folder.") # TODO: better exception
-            self.meta = {}
-            self.title = folder['title']
-            self.folders = get_folder_list(drive, folder['id'])
-            
-            # does it have the .metadata file?
-            try:
-                metadata = self.get_metadata(drive, folder['id'])
-                print(f"Found metadata file for {self.title}.")
-                self.meta = json_to_unit(metadata.GetContentString(remove_bom=True), SaveUnit)
-            except FileNotUploadedError as err:
-                print(f"Could not find metadata for {self.title}.")
-                # TODO creating the .metadata file
-            except FileNotDownloadableError as err:
-                print(f"{self.title} has more than one metadata file. Needs human input.")
-                # TODO the human input
-
+        @property
+        def name(self):
+            return self.folder['title']
+        @property
+        def id(self):
+            return self.folder['id']
         
             
 
