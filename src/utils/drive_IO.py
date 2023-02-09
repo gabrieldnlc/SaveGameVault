@@ -1,22 +1,86 @@
 from pydrive2.drive import GoogleDrive, GoogleDriveFile
 
 from .consts import *
+from .local_files import LocalFile, LocalFolder
+
+# SUBCLASSES START
+class CloudFile:
+    """An encapsulation of a GoogleDriveFile for readability and ease of use."""
+    def __init__(self, drive_file : GoogleDriveFile):
+        self.file = drive_file
+
+    @property
+    def title(self):
+        return self.file['title']
+    @property
+    def id(self):
+        return self.file['id']
+    @property
+    def mime(self):
+        return self.file['mimeType']
+        
+    def __repr__(self):
+        return f"{self.title} (id: {self.id})"
+
+class CloudFolder:
+    """An encapsulation of a GoogleDriveFile (as a folder) for readability and ease of use."""
+
+    def __init__(self, drive_folder : GoogleDriveFile):
+        self.folder = drive_folder
+        self.files = [] # to be filled by factory method.       
+
+    @property
+    def title(self):
+        return self.folder['title']
+    @property
+    def id(self):
+        return self.folder['id']
+    @property
+    def mime(self):
+        return self.folder['mimeType']
+        
+    def __repr__(self):
+        return f"{self.title}\ (id: {self.id})"
+    # SUBCLASSES END
 
 class FileManager():
     def __init__(self, drive : GoogleDrive):
         self.drive = drive
-        self.curr_folder_id = 'root'
+        self._f_id = ""
+        self.go_to_root()
+
+    @property
+    def current_folder(self):
+        return self._f_id
+    
+    @current_folder.setter
+    def current_folder(self, folder : str | CloudFolder | GoogleDriveFile ):
+        if (folder == 'root'):
+            self._f_id = 'root'
+            print("Current folder: root.")
+            return
+        if (isinstance(folder, GoogleDriveFile)):
+            folder = CloudFolder(folder)
+
+        if (isinstance(folder, CloudFolder)):
+            self._f_id = folder.id
+            print (f"Current folder: {folder.title} (id: '{folder.id}').")
+            return
+        raise LookupError("Cannot change current folder: invalid string (try 'root' or passing a CloudFolder instance).")
+    
+    def go_to_root(self):
+        self.current_folder = "root"
 
     def list_all(self) -> list:
-        query = f"'{self.curr_folder_id}' in parents and trashed=false"
+        query = f"'{self.current_folder}' in parents and trashed=false"
         return self.drive.ListFile({'q': query }).GetList()
     
     def list_files(self) -> list:
-        query = f"'{self.curr_folder_id}' in parents and mimeType !='{MIME_FOLDER}' and trashed=false"
+        query = f"'{self.current_folder}' in parents and mimeType !='{MIME_FOLDER}' and trashed=false"
         return self.drive.ListFile({'q': query }).GetList()
 
     def list_folders(self) -> list:
-        query = f"'{self.curr_folder_id}' in parents and mimeType='{MIME_FOLDER}' and trashed=false"
+        query = f"'{self.current_folder}' in parents and mimeType='{MIME_FOLDER}' and trashed=false"
         return self.drive.ListFile({'q': query }).GetList()
     
     def print_list_folders(self):
@@ -29,7 +93,7 @@ class FileManager():
         try:
             folder = self.drive.CreateFile({
             'title': folder_name, 
-            "parents":  [{"id": self.curr_folder_id}], 
+            "parents":  [{"id": self.current_folder}], 
             "mimeType": MIME_FOLDER
             })
             folder.Upload()
@@ -43,7 +107,7 @@ class FileManager():
         new_dir = self.get_folder(child_folder)
         if (not new_dir):
             return False
-        self.curr_folder_id = new_dir['id']
+        self.current_folder = new_dir
         return True
 
     def get_folder(self, folder_name : str) -> GoogleDriveFile | bool:
@@ -58,7 +122,7 @@ class FileManager():
     def search_files_in_folder(self, title : str) -> list | bool:
         """Returns a list of files inside current folder that match 'title'. 
         Returns False if no matches are found."""
-        query = f"'{self.curr_folder_id}' in parents and title='{title}' and trashed=false"
+        query = f"'{self.current_folder}' in parents and title='{title}' and trashed=false"
         file_list = self.drive.ListFile({'q': query }).GetList()
         if (len(file_list) == 0):
             return False
@@ -79,3 +143,7 @@ class FileManager():
         if (len(file_list) == 0):
             return False
         return file_list
+
+    def upload_file(self, file : LocalFile) -> bool:
+        """Uploads a file to the current working folder.
+        Returns True on success."""

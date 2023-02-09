@@ -1,6 +1,7 @@
 ﻿
 from pydrive2.auth import GoogleAuth
 from pydrive2.drive import GoogleDrive
+from pydrive2.files import ApiRequestError
 
 from utils.index import MainIndex
 
@@ -17,9 +18,11 @@ if __name__ == "__main__":
         gauth.LocalWebserverAuth()
         drive = GoogleDrive(gauth) # TODO: check for AuthenticationError, Timeout
         index = MainIndex(drive)
-       
+    
+    except ApiRequestError as err:
+        print(f"API error: {err.GetField()}.")
     except Exception as err:
-        print(f"Error: {''.join(err.args)}")
+        print(f"Error: {''.join(err.args)}.")
     
 
 

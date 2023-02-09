@@ -61,7 +61,6 @@ class LocalFolder():
         """Folders come first, then files. If looking for folders only, stop the search at first file."""
         
         self.metadata = create_metadata(self)
-        "baba booey"
 
     @property
     def stat(self):

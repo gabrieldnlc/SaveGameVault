@@ -4,63 +4,26 @@ from pydrive2.drive import GoogleDrive, GoogleDriveFile
 
 from .consts import *
 from .saveunit import *
-from .drive_IO import FileManager
+from .drive_IO import FileManager, CloudFile, CloudFolder
+
+
 
 class MainIndex:
     """An object representing the Drive folders for the UI""" 
-     
-    # SUBCLASSES START
-    class CloudFile:
-        """An encapsulation of a GoogleDriveFile for readability and ease of use."""
-        def __init__(self, drive_file : GoogleDriveFile):
-            self.file = drive_file
-
-        @property
-        def title(self):
-            return self.file['title']
-        @property
-        def id(self):
-            return self.file['id']
-        @property
-        def mime(self):
-            return self.file['mimeType']
-        
-        def __repr__(self):
-            return f"{self.title} (id: {self.id})"
-
-    class CloudFolder:
-        """An encapsulation of a GoogleDriveFile (as a folder) for readability and ease of use."""
-
-        def __init__(self, drive_folder : GoogleDriveFile):
-            self.folder = drive_folder
-            self.files = [] # to be filled by factory method.       
-
-        @property
-        def title(self):
-            return self.folder['title']
-        @property
-        def id(self):
-            return self.folder['id']
-        @property
-        def mime(self):
-            return self.folder['mimeType']
-        
-        def __repr__(self):
-            return f"{self.title}\ (id: {self.id})"
-    # SUBCLASSES END
-
 
     def __init__(self, drive : GoogleDrive):
         self.games = {}
         self.file_manager = FileManager(drive)
         self._first_run()
+        
+        
     
     def _create_indexed_instance(self, drive_file : GoogleDriveFile) -> CloudFile | CloudFolder:
         mime = drive_file['mimeType']
         if (mime != MIME_FOLDER):
-            return self.CloudFile(drive_file)
+            return CloudFile(drive_file)
         else:
-            folder = self.CloudFolder(drive_file)
+            folder = CloudFolder(drive_file)
             files = self.file_manager.go_to_folder_and_list(folder.id)
             if (files):
                 for file in files:
@@ -77,7 +40,7 @@ class MainIndex:
 
         vault_folder = self.file_manager.get_folder(VAULT_FOLDER_NAME)
         if (not vault_folder):
-            print(f"Creating folder '{VAULT_FOLDER_NAME} in ID '{self.file_manager.curr_folder_id}'.")
+            print(f"Creating folder '{VAULT_FOLDER_NAME} in ID '{self.file_manager.current_folder}'.")
             vault_folder = self.file_manager.create_folder(VAULT_FOLDER_NAME)
             if (not vault_folder):
                 # TODO more expressive error
