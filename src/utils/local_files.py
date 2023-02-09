@@ -1,3 +1,4 @@
+import jsons
 from pathlib import Path
 
 class LocalFile():
@@ -58,7 +59,10 @@ class LocalFolder():
 
         self.index = list_folders + list_files
         """Folders come first, then files. If looking for folders only, stop the search at first file."""
-            
+        
+        self.metadata = create_metadata(self)
+        "baba booey"
+
     @property
     def stat(self):
         return self.path.stat()
@@ -79,3 +83,17 @@ class LocalFolder():
         for file in self.index:
             l.append(file.name)
         return l
+
+
+def create_metadata(folder : LocalFolder) -> dict:
+    data = {}
+    for file in folder.index:
+        if (isinstance(file, LocalFile)):
+            data[file.name] = {'local_lastmodified' : file.last_modified, 'comment' : ''}
+    return data
+
+def metadata_to_json(metadata : dict) -> str:
+    return jsons.dumps(metadata)
+
+def json_to_metadata(json : str) -> dict:
+    return jsons.load(json, dict)

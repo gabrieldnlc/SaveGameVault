@@ -1,7 +1,6 @@
 # reminder: set the remove_bom parameter in GetContentString()
 
 from pydrive2.drive import GoogleDrive, GoogleDriveFile
-from pydrive2.files import FileNotUploadedError, FileNotDownloadableError
 
 from .consts import *
 from .saveunit import *
@@ -11,7 +10,7 @@ class MainIndex:
     """An object representing the Drive folders for the UI""" 
      
     # SUBCLASSES START
-    class IndexedCloudFile:
+    class CloudFile:
         """An encapsulation of a GoogleDriveFile for readability and ease of use."""
         def __init__(self, drive_file : GoogleDriveFile):
             self.file = drive_file
@@ -29,7 +28,7 @@ class MainIndex:
         def __repr__(self):
             return f"{self.title} (id: {self.id})"
 
-    class IndexedCloudFolder:
+    class CloudFolder:
         """An encapsulation of a GoogleDriveFile (as a folder) for readability and ease of use."""
 
         def __init__(self, drive_folder : GoogleDriveFile):
@@ -56,12 +55,12 @@ class MainIndex:
         self.file_manager = FileManager(drive)
         self._first_run()
     
-    def _create_indexed_instance(self, drive_file : GoogleDriveFile) -> IndexedCloudFile | IndexedCloudFolder:
+    def _create_indexed_instance(self, drive_file : GoogleDriveFile) -> CloudFile | CloudFolder:
         mime = drive_file['mimeType']
         if (mime != MIME_FOLDER):
-            return self.IndexedCloudFile(drive_file)
+            return self.CloudFile(drive_file)
         else:
-            folder = self.IndexedCloudFolder(drive_file)
+            folder = self.CloudFolder(drive_file)
             files = self.file_manager.go_to_folder_and_list(folder.id)
             if (files):
                 for file in files:
