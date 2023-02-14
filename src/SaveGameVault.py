@@ -20,7 +20,7 @@ if __name__ == "__main__":
         index = MainIndex(drive)
     
     except ApiRequestError as err:
-        print(f"API error: {err.GetField()}.")
+        print(f"API error: {err.GetField('message')}.")
     except Exception as err:
         print(f"Error: {''.join(err.args)}.")
     

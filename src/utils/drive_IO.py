@@ -1,53 +1,63 @@
 from pydrive2.drive import GoogleDrive, GoogleDriveFile
+from pydrive2.files import ApiRequestError
 
 from .consts import *
 from .local_files import LocalFile, LocalFolder
 
-# SUBCLASSES START
-class CloudFile:
-    """An encapsulation of a GoogleDriveFile for readability and ease of use."""
-    def __init__(self, drive_file : GoogleDriveFile):
-        self.file = drive_file
 
-    @property
-    def title(self):
-        return self.file['title']
-    @property
-    def id(self):
-        return self.file['id']
-    @property
-    def mime(self):
-        return self.file['mimeType']
-        
-    def __repr__(self):
-        return f"{self.title} (id: {self.id})"
 
-class CloudFolder:
-    """An encapsulation of a GoogleDriveFile (as a folder) for readability and ease of use."""
-
-    def __init__(self, drive_folder : GoogleDriveFile):
-        self.folder = drive_folder
-        self.files = [] # to be filled by factory method.       
-
-    @property
-    def title(self):
-        return self.folder['title']
-    @property
-    def id(self):
-        return self.folder['id']
-    @property
-    def mime(self):
-        return self.folder['mimeType']
-        
-    def __repr__(self):
-        return f"{self.title}\ (id: {self.id})"
-    # SUBCLASSES END
-
-class FileManager():
+class Drive_IO():
     def __init__(self, drive : GoogleDrive):
         self.drive = drive
         self._f_id = ""
         self.go_to_root()
+
+    # SUBCLASSES START
+    class CloudFile:
+        """An encapsulation of a GoogleDriveFile for readability and ease of use."""
+        def __init__(self, drive_file : GoogleDriveFile):
+            self._file = drive_file
+
+        @property
+        def title(self):
+            return self._file['title']
+        @property
+        def id(self):
+            return self._file['id']
+        @property
+        def mime(self):
+            return self._file['mimeType']
+            
+        def __repr__(self):
+            return f"{self.title} (id: {self.id})"
+
+    class CloudFolder:
+        """An encapsulation of a GoogleDriveFile (as a folder) for readability and ease of use."""
+
+        def __init__(self, IO: 'Drive_IO', drive_folder : GoogleDriveFile):
+            self._folder = drive_folder
+            self.files = [] # to be filled by factory method.   
+            files = IO.go_to_folder_and_list(drive_folder['id'])
+            if (files):
+                for file in files:
+                    self.files.append(IO._create_indexed_instance(file))
+                # Making the folders come first:
+                self.files.sort(key=lambda e : e.mime, reverse=True)
+                
+
+        @property
+        def title(self):
+            return self._folder['title']
+        @property
+        def id(self):
+            return self._folder['id']
+        @property
+        def mime(self):
+            return self._folder['mimeType']
+            
+        def __repr__(self):
+            return f"{self.title}\ (id: {self.id})"
+    # SUBCLASSES END
 
     @property
     def current_folder(self):
@@ -60,14 +70,30 @@ class FileManager():
             print("Current folder: root.")
             return
         if (isinstance(folder, GoogleDriveFile)):
-            folder = CloudFolder(folder)
+            folder = self.CloudFolder(self, folder)
 
-        if (isinstance(folder, CloudFolder)):
+        if (isinstance(folder, self.CloudFolder)):
             self._f_id = folder.id
             print (f"Current folder: {folder.title} (id: '{folder.id}').")
             return
         raise LookupError("Cannot change current folder: invalid string (try 'root' or passing a CloudFolder instance).")
     
+    def drive_file_from_id(self, id : str) -> GoogleDriveFile | bool:
+        """Returns an instance of GoogleDriveFile pointing to the ID.
+        Returns False if file or folder does not exist."""
+        try:
+            file = self.drive.CreateFile({'id': id})
+            return file
+        except ApiRequestError:
+            return False
+    
+    def _create_indexed_instance(self, drive_file : GoogleDriveFile) -> CloudFile | CloudFolder:
+        mime = drive_file['mimeType']
+        if (mime != MIME_FOLDER):
+            return self.CloudFile(drive_file)
+        else:
+            return self.CloudFolder(self, drive_file)
+
     def go_to_root(self):
         self.current_folder = "root"
 
