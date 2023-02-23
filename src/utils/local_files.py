@@ -1,4 +1,3 @@
-import jsons
 from pathlib import Path
 
 class LocalFile():
@@ -38,7 +37,8 @@ class LocalFile():
         return self.path.__str__()
 
 class LocalFolder():
-    """An encapsulation of a pathlib.Path, for efficiency and readability. Specialized to deal with folders."""
+    """An encapsulation of a pathlib.Path, for efficiency and readability. 
+    Specialized to deal with folders."""
     
     def __init__(self, path : str | Path):
         self.path = Path(path)        
@@ -49,19 +49,18 @@ class LocalFolder():
         if (not self.path.exists()):
             raise FileNotFoundError(f"'{path} is not a valid folder.'")
         
-        list_folders = []
-        list_files = []
+        self.subfolder_list = []
+        self.file_list = []
         for x in self.path.iterdir():
             if (x.is_dir()):
-                list_folders.append(LocalFolder(x))
+                self.subfolder_list.append(LocalFolder(x))
             else:
-                list_files.append(LocalFile(x))
-
-        self.index = list_folders + list_files
-        """Folders come first, then files. If looking for folders only, stop the search at first file."""
+                self.file_list.append(LocalFile(x))
         
-        self.metadata = create_metadata(self)
-
+    @property
+    def index(self):
+        """Subfolders come first, then files."""
+        return self.subfolder_list + self.file_list
     @property
     def stat(self):
         return self.path.stat()
@@ -82,17 +81,3 @@ class LocalFolder():
         for file in self.index:
             l.append(file.name)
         return l
-
-
-def create_metadata(folder : LocalFolder) -> dict:
-    data = {}
-    for file in folder.index:
-        if (isinstance(file, LocalFile)):
-            data[file.name] = {'local_lastmodified' : file.last_modified, 'comment' : ''}
-    return data
-
-def metadata_to_json(metadata : dict) -> str:
-    return jsons.dumps(metadata)
-
-def json_to_metadata(json : str) -> dict:
-    return jsons.load(json, dict)

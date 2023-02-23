@@ -114,19 +114,22 @@ class Drive_IO():
         for folder in self.list_folders():
             print('Title: %s, id: %s' % (folder['title'], folder['id']))
 
-    def create_folder(self, folder_name : str) -> GoogleDriveFile | bool:
-        """Creates (and returns) a 'folder_name' inside of current folder.
-        Returns False if operation was not successful."""
-        try:
-            folder = self.drive.CreateFile({
-            'title': folder_name, 
-            "parents":  [{"id": self.current_folder}], 
-            "mimeType": MIME_FOLDER
-            })
-            folder.Upload()
-            return folder
-        except: # TODO extend error catching
-            return False
+    def create_folder(self, folder_name : str, enter_after = False) -> GoogleDriveFile | bool:
+        """Creates (and returns) a 'folder_name' folder inside of current working directory.
+        If enter_after == True, working directory will be changed to the newly created folder."""
+
+        folder = self.drive.CreateFile({
+        'title': folder_name, 
+        "parents":  [{"id": self.current_folder}], 
+        "mimeType": MIME_FOLDER
+        })
+        folder.Upload()
+        print(f"Created '{folder_name}' folder in '{self.current_folder}'.")
+
+        if (enter_after):
+            self.go_down_a_level(folder_name)
+
+        return folder
         
     def go_down_a_level(self, child_folder : str) -> bool:
         """Moves one directory down, into 'child_folder' of current working directory. 
@@ -139,7 +142,7 @@ class Drive_IO():
 
     def get_folder(self, folder_name : str) -> GoogleDriveFile | bool:
         """Searches for (and returns) 'folder_name' inside of current folder.
-          Returns False if folder does not exist."""
+          Returns a GoogleDriveFile instance or False if folder does not exist."""
         list = self.list_folders()
         for folder in list:
             if (folder['title'] == folder_name):
@@ -172,28 +175,60 @@ class Drive_IO():
         return file_list
 
     def upload_file(self, file : str | LocalFile) -> bool:
-        """Uploads a file to the current working folder.
-        Returns True on success."""
+        """Uploads a local file to the current working folder.
+        Returns a GoogleDriveFile instance or False on fail."""
         if (isinstance(file, str)):
             f = LocalFile(file)
             return self.upload_file(f)
         
         if not (isinstance(file, LocalFile)):
-            return False # TODO create an error for this situation
+            raise FileNotFoundError(f"Could not find '{file}'")
         
-        try:
-            stat = file.stat
-            modified_on = datetime.fromtimestamp(stat.st_mtime, timezone.utc).isoformat()
 
-            metadata = {
-                "title" : file.name,
-                "parents" : [{"id" : self.current_folder}],
-                "modifiedDate" : modified_on
-                }
-            d_file = self.drive.CreateFile(metadata)
-            d_file.SetContentFile(file.path)
-            d_file.Upload()
-            return True
-        except Exception as err: # TODO catch errors
-            return False
+        stat = file.stat
+        modified_on = datetime.fromtimestamp(stat.st_mtime, timezone.utc).isoformat()
+
+        metadata = {
+            "title" : file.name,
+            "parents" : [{"id" : self.current_folder}],
+            "modifiedDate" : modified_on
+            }
+        d_file = self.drive.CreateFile(metadata)
+        d_file.SetContentFile(file.path)
+        print(f"Uploading {file.name}...", end=" ")
+        d_file.Upload()
+        print(f"Done.")
+        return d_file
+
+    def upload_folder(self, folder : str | LocalFolder) -> bool:
+        """Uploads a local folder in its entirety to the current working folder.
+         Returns a GoogleDriveFile instance or False on fail."""
+        # TODO time elapsed during upload
+        if (isinstance(folder, str)):
+            f = LocalFolder(folder)
+            return self.upload_folder(f)
+        
+        if not (isinstance(folder, LocalFolder)):
+            return False # TODO create an error class for this situation
+        
+        working_folder = self._f_id
+        exists = self.get_folder(folder.name)
+        if (exists):
+            raise ApiRequestError(f"Folder '{folder.name}' already exists on current working folder.")
+        
+        new_folder = self.create_folder(folder.name, True)
+        for file in folder.file_list:
+            self.upload_file(file)
+
+        for subfolder in folder.subfolder_list:
+            self.upload_folder(subfolder)
+
+
+        self._f_id = working_folder 
+        # Returns Drive_IO to the previous working directory after any possible recursions.
+        
+
+
+
+        
 
