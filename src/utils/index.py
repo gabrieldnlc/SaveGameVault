@@ -14,7 +14,7 @@ class MainIndex:
     def __init__(self, drive : GoogleDrive):
         self.games = {}
         self.file_manager = Drive_IO(drive)
-        self._first_run()   
+        self._first_run()
                     
     def _first_run(self) -> bool :
         """First run configurations. 

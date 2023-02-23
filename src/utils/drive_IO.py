@@ -12,7 +12,7 @@ class Drive_IO():
         self._f_id = ""
         self.go_to_root()
 
-    # SUBCLASSES START
+    # SUBCLASSES START # TODO use ABC to create an abstract class and reuse code here
     class CloudFile:
         """An encapsulation of a GoogleDriveFile for readability and ease of use."""
         def __init__(self, drive_file : GoogleDriveFile):
@@ -82,8 +82,7 @@ class Drive_IO():
         """Returns an instance of GoogleDriveFile pointing to the ID.
         Returns False if file or folder does not exist."""
         try:
-            file = self.drive.CreateFile({'id': id})
-            return file
+            return self.drive.CreateFile({'id': id})
         except ApiRequestError:
             return False
     
@@ -170,6 +169,25 @@ class Drive_IO():
             return False
         return file_list
 
-    def upload_file(self, file : LocalFile) -> bool:
+    def upload_file(self, file : str | LocalFile) -> bool:
         """Uploads a file to the current working folder.
         Returns True on success."""
+        if (isinstance(file, str)):
+            f = LocalFile(file)
+            return self.upload_file(f)
+        
+        if not (isinstance(file, LocalFile)):
+            return False # TODO create an error for this situation
+        
+        try:
+            metadata = {
+                "title" : file.name,
+                "parents" : [{"id" : self.current_folder}],
+                }
+            d_file = self.drive.CreateFile(metadata)
+            d_file.SetContentFile(file.path)
+            d_file.Upload()
+            return True
+        except Exception as err: # TODO catch errors
+            return False
+
