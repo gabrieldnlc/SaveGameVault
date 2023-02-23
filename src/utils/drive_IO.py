@@ -1,3 +1,5 @@
+from datetime import datetime, timezone, timedelta
+
 from pydrive2.drive import GoogleDrive, GoogleDriveFile
 from pydrive2.files import ApiRequestError
 
@@ -180,9 +182,13 @@ class Drive_IO():
             return False # TODO create an error for this situation
         
         try:
+            stat = file.stat
+            modified_on = datetime.fromtimestamp(stat.st_mtime, timezone.utc).isoformat()
+
             metadata = {
                 "title" : file.name,
                 "parents" : [{"id" : self.current_folder}],
+                "modifiedDate" : modified_on
                 }
             d_file = self.drive.CreateFile(metadata)
             d_file.SetContentFile(file.path)
