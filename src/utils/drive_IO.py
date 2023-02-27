@@ -1,4 +1,4 @@
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone
 
 from pydrive2.drive import GoogleDrive, GoogleDriveFile
 from pydrive2.files import ApiRequestError
@@ -29,6 +29,15 @@ class Drive_IO():
         @property
         def mime(self):
             return self._file['mimeType']
+        @property
+        def modified_on(self):
+            """Last modified time, in ISO format."""
+            return self._file['modifiedDate']
+        @property
+        def modified_on_iso(self):
+            """Last modified time, in ISO format.
+            An alias of modified_on()."""
+            return self.modified_on()
             
         def __repr__(self):
             return f"{self.title} (id: {self.id})"
@@ -226,6 +235,30 @@ class Drive_IO():
 
         self._f_id = working_folder 
         # Returns Drive_IO to the previous working directory after any possible recursions.
+        
+    @staticmethod
+    def compare_files(file1 : LocalFile | CloudFile, file2: LocalFile | CloudFile) -> int:
+        """Returns:\n
+        -1 = files are different.\n
+        0 = files are exactly the same.\n
+        1 = file1 is a newer version of file2.\n
+        2 = file2 is newer version of file1.
+        
+        Note that the comparison is based on name and date of modification only."""
+
+        if (file1.name != file2.name):
+            return -1
+        if (file1.modified_on_iso == file2.modified_on_iso):
+            return 0
+        
+        file1_modified = datetime.fromisoformat(file1.modified_on_iso)
+        file2_modified = datetime.fromisoformat(file2.modified_on_iso)
+
+        if (file1_modified > file2_modified):
+            return 1
+        return 2
+
+
         
 
 

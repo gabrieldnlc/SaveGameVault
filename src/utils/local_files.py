@@ -1,5 +1,7 @@
 from pathlib import Path
 
+from datetime import datetime, timezone
+
 class LocalFile():
     """An encapsulation of a pathlib.Path, for efficiency and readability. Specialized to deal with files."""
 
@@ -16,7 +18,7 @@ class LocalFile():
         if not isinstance(other, LocalFile):
             return False
         
-        return (self.name == other.name) and (self.size == other.size) and (self.last_modified == other.last_modified)
+        return (self.name == other.name) and (self.size == other.size) and (self.modified_on == other.modified_on)
 
     @property
     def stat(self):
@@ -28,8 +30,13 @@ class LocalFile():
     def size(self):
         return self.stat.st_size
     @property
-    def last_modified(self):
+    def modified_on(self):
+        """Last modified time, in seconds."""
         return self.stat.st_mtime
+    @property
+    def modified_on_iso(self):
+        """Last modified time, in ISO format."""
+        return datetime.fromtimestamp(self.modified_on, timezone.utc).isoformat()
 
     def __str__(self):
         return f"LocalFile: {self.__repr__()}"
