@@ -14,15 +14,16 @@ if __name__ == "__main__":
     # - Display information from index file on screen
 
     try:
+        
         gauth = GoogleAuth()
         gauth.LocalWebserverAuth()
         drive = GoogleDrive(gauth) # TODO: check for AuthenticationError, Timeout
         index = MainIndex(drive)
-    
+            
     except ApiRequestError as err:
         print(f"API error: {err.GetField('message')}.")
     except Exception as err:
-        print(f"Error: {''.join(err.args)}.")
+        print(f"Error: {''.join(err.args)}")
     
 
 

@@ -236,27 +236,27 @@ class Drive_IO():
         self._f_id = working_folder 
         # Returns Drive_IO to the previous working directory after any possible recursions.
         
-    @staticmethod
-    def compare_files(file1 : LocalFile | CloudFile, file2: LocalFile | CloudFile) -> int:
-        """Returns:\n
-        -1 = files are different.\n
-        0 = files are exactly the same.\n
-        1 = file1 is a newer version of file2.\n
-        2 = file2 is newer version of file1.
+    
+def compare_files(file1 : LocalFile | Drive_IO.CloudFile, file2: LocalFile | Drive_IO.CloudFile) -> int:
+    """Returns:\n
+    -1 = files are different.\n
+    0 = files are exactly the same.\n
+    1 = file1 is a newer version of file2.\n
+    2 = file2 is newer version of file1.
         
-        Note that the comparison is based on name and date of modification only."""
+    Note that the comparison is based on name and date of modification only."""
 
-        if (file1.name != file2.name):
-            return -1
-        if (file1.modified_on_iso == file2.modified_on_iso):
-            return 0
+    if (file1.name != file2.name):
+        return -1
+    if (file1.modified_on_iso == file2.modified_on_iso):
+        return 0
         
-        file1_modified = datetime.fromisoformat(file1.modified_on_iso)
-        file2_modified = datetime.fromisoformat(file2.modified_on_iso)
+    file1_modified = datetime.fromisoformat(file1.modified_on_iso)
+    file2_modified = datetime.fromisoformat(file2.modified_on_iso)
 
-        if (file1_modified > file2_modified):
-            return 1
-        return 2
+    if (file1_modified > file2_modified):
+        return 1
+    return 2
 
 
         
