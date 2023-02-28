@@ -185,14 +185,10 @@ class Drive_IO():
 
     def upload_file(self, file : str | LocalFile) -> bool:
         """Uploads a local file to the current working folder.
-        Returns a GoogleDriveFile instance or False on fail."""
+        Returns a GoogleDriveFile instance."""
         if (isinstance(file, str)):
             f = LocalFile(file)
-            return self.upload_file(f)
-        
-        if not (isinstance(file, LocalFile)):
-            raise FileNotFoundError(f"Could not find '{file}'")
-        
+            return self.upload_file(f)        
 
         stat = file.stat
         modified_on = datetime.fromtimestamp(stat.st_mtime, timezone.utc).isoformat()
@@ -208,6 +204,15 @@ class Drive_IO():
         d_file.Upload()
         print(f"Done.")
         return d_file
+
+    def trash_file(self, file : GoogleDriveFile | CloudFile, to_delete = False):
+        """Sends to trash or deletes given file, according to 'to_delete'."""
+        if (isinstance(file, self.CloudFile)):
+            file = file._file
+
+        if to_delete:
+            return file.Delete()
+        return file.Trash()
 
     def upload_folder(self, folder : str | LocalFolder) -> bool:
         """Uploads a local folder in its entirety to the current working folder.
@@ -235,7 +240,6 @@ class Drive_IO():
 
         self._f_id = working_folder 
         # Returns Drive_IO to the previous working directory after any possible recursions.
-        
     
 def compare_files(file1 : LocalFile | Drive_IO.CloudFile, file2: LocalFile | Drive_IO.CloudFile) -> int:
     """Returns:\n
