@@ -214,6 +214,11 @@ class Drive_IO():
             return file.Delete()
         return file.Trash()
 
+    def delete_file(self, file : GoogleDriveFile | CloudFile):
+        """Deletes given file.\n
+        Syntactic sugar for trash_file(file, True)"""
+        return self.trash_file(file, True)
+    
     def upload_folder(self, folder : str | LocalFolder) -> bool:
         """Uploads a local folder in its entirety to the current working folder.
          Returns a GoogleDriveFile instance or False on fail."""
@@ -240,7 +245,22 @@ class Drive_IO():
 
         self._f_id = working_folder 
         # Returns Drive_IO to the previous working directory after any possible recursions.
+        
+    def trash_folder(self, folder : GoogleDriveFile | CloudFolder, to_delete = False):
+        """Sends to trash or deletes given folder (including children files and folders), according to 'to_delete'."""
+        if (isinstance(folder, Drive_IO.CloudFolder)):
+            folder = folder._folder
+
+        if (to_delete):
+            return folder.Delete()
+        return folder.Trash()
     
+    def delete_folder(self, folder : GoogleDriveFile | CloudFolder):
+        """Deletes given folder and children.\n
+        Syntactic sugar for trash_folder(folder, True)"""
+        return self.trash_folder(folder, True)
+
+
 def compare_files(file1 : LocalFile | Drive_IO.CloudFile, file2: LocalFile | Drive_IO.CloudFile) -> int:
     """Returns:\n
     -1 = files are different.\n
