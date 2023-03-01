@@ -18,13 +18,13 @@ class LocalFile():
         if not isinstance(other, LocalFile):
             return False
         
-        return (self.name == other.name) and (self.size == other.size) and (self.modified_on == other.modified_on)
+        return (self.title == other.title) and (self.size == other.size) and (self.modified_on == other.modified_on)
 
     @property
     def stat(self):
         return self.path.stat()
     @property
-    def name(self):
+    def title(self):
         return self.path.name
     @property
     def size(self):
@@ -37,6 +37,10 @@ class LocalFile():
     def modified_on_iso(self):
         """Last modified time, in ISO format."""
         return datetime.fromtimestamp(self.modified_on, timezone.utc).isoformat()
+    @property
+    def modified_on_datetime(self) -> datetime:
+        """Last modified time, wrapped in a datetime instance."""
+        return datetime.fromisoformat(self.modified_on_iso)
 
     def __str__(self):
         return f"LocalFile: {self.__repr__()}"
@@ -75,7 +79,7 @@ class LocalFolder():
     def size(self):
         return self.stat.st_size
     @property
-    def name(self):
+    def title(self):
         return self.path.name
 
     def __str__(self):

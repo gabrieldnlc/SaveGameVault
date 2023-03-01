@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 from pydrive2.drive import GoogleDrive, GoogleDriveFile
 from pydrive2.files import ApiRequestError
@@ -30,14 +30,18 @@ class Drive_IO():
         def mime(self):
             return self._file['mimeType']
         @property
-        def modified_on(self):
+        def modified_on(self) -> str:
             """Last modified time, in ISO format."""
             return self._file['modifiedDate']
         @property
-        def modified_on_iso(self):
+        def modified_on_iso(self) -> str:
             """Last modified time, in ISO format.
             An alias of modified_on()."""
-            return self.modified_on()
+            return self.modified_on
+        @property
+        def modified_on_datetime(self) -> datetime:
+            """Last modified time, wrapped in a datetime instance."""
+            return datetime.fromisoformat(self.modified_on_iso)
             
         def __repr__(self):
             return f"{self.title} (id: {self.id})"
@@ -183,10 +187,10 @@ class Drive_IO():
             return False
         return file_list
 
-    def upload_file(self, file : str | LocalFile) -> bool:
+    def upload_file(self, file : str | LocalFile) -> GoogleDriveFile:
         """Uploads a local file to the current working folder.
         Returns a GoogleDriveFile instance."""
-        if (isinstance(file, str)):
+        if (not isinstance(file, LocalFile)):
             f = LocalFile(file)
             return self.upload_file(f)        
 
@@ -194,13 +198,13 @@ class Drive_IO():
         modified_on = datetime.fromtimestamp(stat.st_mtime, timezone.utc).isoformat()
 
         metadata = {
-            "title" : file.name,
+            "title" : file.title,
             "parents" : [{"id" : self.current_folder}],
             "modifiedDate" : modified_on
             }
         d_file = self.drive.CreateFile(metadata)
         d_file.SetContentFile(file.path)
-        print(f"Uploading {file.name}...", end=" ")
+        print(f"Uploading {file.title}...", end=" ")
         d_file.Upload()
         print(f"Done.")
         return d_file
@@ -223,19 +227,16 @@ class Drive_IO():
         """Uploads a local folder in its entirety to the current working folder.
          Returns a GoogleDriveFile instance or False on fail."""
         # TODO time elapsed during upload
-        if (isinstance(folder, str)):
+        if (not isinstance(folder, LocalFolder)):
             f = LocalFolder(folder)
             return self.upload_folder(f)
         
-        if not (isinstance(folder, LocalFolder)):
-            return False # TODO create an error class for this situation
-        
         working_folder = self._f_id
-        exists = self.get_folder(folder.name)
+        exists = self.get_folder(folder.title)
         if (exists):
-            raise ApiRequestError(f"Folder '{folder.name}' already exists on current working folder.")
+            raise ApiRequestError(f"Folder '{folder.title}' already exists on current working folder.")
         
-        new_folder = self.create_folder(folder.name, True)
+        new_folder = self.create_folder(folder.title, True)
         for file in folder.file_list:
             self.upload_file(file)
 
@@ -260,27 +261,34 @@ class Drive_IO():
         Syntactic sugar for trash_folder(folder, True)"""
         return self.trash_folder(folder, True)
 
+    @staticmethod
+    def compare_files(file1 : LocalFile | CloudFile, file2: LocalFile | CloudFile) -> int:
+        """Returns:\n
+        -1 = files are different.\n
+        0 = files are exactly the same.\n
+        1 = file1 is a newer version of file2.\n
+        2 = file2 is newer version of file1.
+            
+        Note that the comparison is based on name and date of modification only."""
 
-def compare_files(file1 : LocalFile | Drive_IO.CloudFile, file2: LocalFile | Drive_IO.CloudFile) -> int:
-    """Returns:\n
-    -1 = files are different.\n
-    0 = files are exactly the same.\n
-    1 = file1 is a newer version of file2.\n
-    2 = file2 is newer version of file1.
+        if (file1.title != file2.title):
+            return -1
+                    
+        file1_modified = file1.modified_on_datetime
+        file2_modified = file2.modified_on_datetime
+
+        if (file1_modified == file2_modified):
+            return 0
         
-    Note that the comparison is based on name and date of modification only."""
+        ACCEPTABLE_DIFFERENCE = timedelta(microseconds = 50000)
+        """Google Drive shaves off a few microseconds of the modified on date during upload."""
+        diff = abs(file1_modified - file2_modified)
+        if (diff <= ACCEPTABLE_DIFFERENCE):
+            return 0
 
-    if (file1.name != file2.name):
-        return -1
-    if (file1.modified_on_iso == file2.modified_on_iso):
-        return 0
-        
-    file1_modified = datetime.fromisoformat(file1.modified_on_iso)
-    file2_modified = datetime.fromisoformat(file2.modified_on_iso)
-
-    if (file1_modified > file2_modified):
-        return 1
-    return 2
+        if (file1_modified > file2_modified):
+            return 1
+        return 2
 
 
         
