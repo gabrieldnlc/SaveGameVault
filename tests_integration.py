@@ -2,7 +2,7 @@ import unittest
 from os import getcwd
 from pathlib import Path
 from shutil import rmtree
-from datetime import timedelta
+from time import sleep
 
 from pydrive2.auth import GoogleAuth
 from pydrive2.drive import GoogleDrive
@@ -27,8 +27,6 @@ class TestComparison(unittest.TestCase):
         self.local_folder.mkdir(exist_ok = False)
         self.created_local_folder = True
         
-
-
     @classmethod
     def setUpClass(cls):
         gauth = GoogleAuth()
@@ -58,13 +56,24 @@ class TestComparison(unittest.TestCase):
         if not cls.environment_prepared:
             return
         cls.drive.go_to_root()
-        
-        
+              
         if (cls.cloud_folder != None and cls.created_cloud_folder):
             cls.cloud_folder.Delete()
 
         if (cls.local_folder != None and cls.created_local_folder):
             rmtree(cls.local_folder)
+
+
+    def _create_and_fill(self, filename : str, content : str, exist_ok = False):
+        file = self.local_folder / filename
+        file.touch(exist_ok = exist_ok)
+        file.write_text(content)
+        return file
+    
+    def test_upload(self):
+        raise NotImplementedError()
+        # TODO
+        
 
     def test_comparison(self):
         test_text = (
@@ -76,15 +85,40 @@ class TestComparison(unittest.TestCase):
         "Vestibulum eu ante a ligula rutrum rhoncus."
         )
 
-        test_file = self.local_folder / "test_file.txt"
-        test_file.touch(exist_ok = False)
-        test_file.write_text(test_text)
+        comparison_test = self._create_and_fill("comparison_test.txt", test_text, False)
 
-        local = LocalFile(test_file)
-        uploaded = Drive_IO.CloudFile(self.drive.upload_file(test_file))
+        local = LocalFile(comparison_test)
+        uploaded = Drive_IO.CloudFile(self.drive.upload_file(comparison_test))
 
-        comparison = self.drive.compare_files(local, uploaded)
-        self.assertEqual(comparison, 0)
+        # Same file, but on different environments.
+        self.assertEqual(self.drive.compare_files(local, uploaded), 0)
+        # Same file on the same environment.
+        self.assertEqual(self.drive.compare_files(local, local), 0)
+        self.assertEqual(self.drive.compare_files(uploaded, uploaded), 0)
+
+        comparison_test2 = self._create_and_fill("comparison_test2.txt", test_text.upper(), False)
+
+        local2 = LocalFile(comparison_test2)
+        uploaded2 = Drive_IO.CloudFile(self.drive.upload_file(comparison_test2))
+        
+        # Same file, but on different environments.
+        self.assertEqual(self.drive.compare_files(local2, uploaded2), 0)
+        # Different files on the same environment.
+        self.assertEqual(self.drive.compare_files(uploaded2, uploaded), -1)
+        self.assertEqual(self.drive.compare_files(local2, local), -1)
+        # Different files on different environments.
+        self.assertEqual(self.drive.compare_files(uploaded2, local), -1)
+        self.assertEqual(self.drive.compare_files(local2, uploaded), -1)
+
+        # Same file, but newer.
+        # TODO
+        pass
+
+        #same file, but older.
+        # TODO
+        pass
+
+        
 
         
         

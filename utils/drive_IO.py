@@ -9,6 +9,8 @@ from .local_files import LocalFile, LocalFolder
 
 
 class Drive_IO():
+    """Class that deals with all Google Drive related interactions.\n
+    Enforces a "no two files with same filename" rule, instead of the ID based system from Google."""
     def __init__(self, drive : GoogleDrive):
         self.drive = drive
         self._f_id = ""
@@ -94,7 +96,7 @@ class Drive_IO():
         raise LookupError("Cannot change current folder: invalid string (try 'root' or passing a CloudFolder instance).")
     
     def drive_file_from_id(self, id : str) -> GoogleDriveFile | bool:
-        """Returns an instance of GoogleDriveFile pointing to the ID.
+        """Returns an instance of GoogleDriveFile pointing to the ID.\n
         Returns False if file or folder does not exist."""
         try:
             return self.drive.CreateFile({'id': id})
@@ -103,10 +105,11 @@ class Drive_IO():
     
     def _create_indexed_instance(self, drive_file : GoogleDriveFile) -> CloudFile | CloudFolder:
         mime = drive_file['mimeType']
+
         if (mime != MIME_FOLDER):
             return self.CloudFile(drive_file)
-        else:
-            return self.CloudFolder(self, drive_file)
+        
+        return self.CloudFolder(self, drive_file)
 
     def go_to_root(self):
         self.current_folder = "root"
@@ -118,7 +121,7 @@ class Drive_IO():
     def list_files(self) -> list:
         query = f"'{self.current_folder}' in parents and mimeType !='{MIME_FOLDER}' and trashed=false"
         return self.drive.ListFile({'q': query }).GetList()
-
+                
     def list_folders(self) -> list:
         query = f"'{self.current_folder}' in parents and mimeType='{MIME_FOLDER}' and trashed=false"
         return self.drive.ListFile({'q': query }).GetList()
@@ -128,8 +131,11 @@ class Drive_IO():
             print('Title: %s, id: %s' % (folder['title'], folder['id']))
 
     def create_folder(self, folder_name : str, enter_after = False) -> GoogleDriveFile | bool:
-        """Creates (and returns) a 'folder_name' folder inside of current working directory.
+        """Creates (and returns) a 'folder_name' folder inside of current working directory.\n
         If enter_after == True, working directory will be changed to the newly created folder."""
+
+        if (self.get_folder(folder_name)):
+            raise FileExistsError(f"There is already a folder named '{folder_name}'.")
 
         folder = self.drive.CreateFile({
         'title': folder_name, 
@@ -145,7 +151,7 @@ class Drive_IO():
         return folder
         
     def go_down_a_level(self, child_folder : str) -> bool:
-        """Moves one directory down, into 'child_folder' of current working directory. 
+        """Moves one directory down, into 'child_folder' of current working directory.\n
         Returns True if success, False if folder does not exist."""
         new_dir = self.get_folder(child_folder)
         if (not new_dir):
@@ -154,7 +160,7 @@ class Drive_IO():
         return True
 
     def get_folder(self, folder_name : str) -> GoogleDriveFile | bool:
-        """Searches for (and returns) 'folder_name' inside of current folder.
+        """Searches for (and returns) 'folder_name' inside of current folder.\n
           Returns a GoogleDriveFile instance or False if folder does not exist."""
         list = self.list_folders()
         for folder in list:
@@ -162,19 +168,19 @@ class Drive_IO():
                 return folder
         return False
     
-    def search_files_in_folder(self, title : str) -> list | bool:
-        """Returns a list of files inside current folder that match 'title'. 
+    def search_files_in_folder(self, title : str) -> GoogleDriveFile | bool:
+        """Returns a list of files inside current folder that match 'title'.\n
         Returns False if no matches are found."""
         query = f"'{self.current_folder}' in parents and title='{title}' and trashed=false"
         file_list = self.drive.ListFile({'q': query }).GetList()
         if (len(file_list) == 0):
             return False
-        return file_list
+        return file_list[0]
     
     def go_to_folder_and_list(self, folder_id : str, list_files = True, list_folders = True) -> list | bool:
-        """Lists files and folders inside 'folder_id'.
-        Uses boolean flags to switch query type: everything, files only or folders only.
-        Returns a list or False if there were no hits."""
+        """Lists files and folders inside 'folder_id'.\n
+        Uses boolean flags to switch query type: everything, files only or folders only.\n
+        Returns a list or False, if there were no hits."""
         query = f"'{folder_id}' in parents and trashed=false"
         if not (list_files and list_folders):
             if not list_files:
@@ -186,13 +192,19 @@ class Drive_IO():
         if (len(file_list) == 0):
             return False
         return file_list
+    
 
-    def upload_file(self, file : str | LocalFile) -> GoogleDriveFile:
-        """Uploads a local file to the current working folder.
+    def upload_file(self, file : str | LocalFile, exist_ok = False) -> GoogleDriveFile:
+        """Uploads a local file to the current working folder.\n
+        If exist_ok == False and there is a file with the same name, will throw FileExistsError.\n
         Returns a GoogleDriveFile instance."""
         if (not isinstance(file, LocalFile)):
             f = LocalFile(file)
             return self.upload_file(f)        
+
+        exists = self.search_files_in_folder(file.title)
+        if (exists and not exist_ok):
+            raise FileExistsError(f"A file named '{file.title}' already exists in the working folder.")
 
         stat = file.stat
         modified_on = datetime.fromtimestamp(stat.st_mtime, timezone.utc).isoformat()
@@ -236,7 +248,7 @@ class Drive_IO():
         if (exists):
             raise ApiRequestError(f"Folder '{folder.title}' already exists on current working folder.")
         
-        new_folder = self.create_folder(folder.title, True)
+        self.create_folder(folder.title, True)
         for file in folder.file_list:
             self.upload_file(file)
 
@@ -280,7 +292,7 @@ class Drive_IO():
         if (file1_modified == file2_modified):
             return 0
         
-        ACCEPTABLE_DIFFERENCE = timedelta(microseconds = 50000)
+        ACCEPTABLE_DIFFERENCE = timedelta(microseconds = 5000)
         """Google Drive shaves off a few microseconds of the modified on date during upload."""
         diff = abs(file1_modified - file2_modified)
         if (diff <= ACCEPTABLE_DIFFERENCE):
