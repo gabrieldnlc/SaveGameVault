@@ -1,4 +1,5 @@
 from datetime import datetime, timezone, timedelta
+from pathlib import Path
 
 from pydrive2.drive import GoogleDrive, GoogleDriveFile
 from pydrive2.files import ApiRequestError
@@ -168,14 +169,12 @@ class Drive_IO():
                 return folder
         return False
     
-    def search_files_in_folder(self, title : str) -> GoogleDriveFile | bool:
+    def search_in_folder(self, title : str) -> list[GoogleDriveFile] | bool:
         """Returns a list of files inside current folder that match 'title'.\n
-        Returns False if no matches are found."""
+        Returns an empty list if no files are found."""
         query = f"'{self.current_folder}' in parents and title='{title}' and trashed=false"
         file_list = self.drive.ListFile({'q': query }).GetList()
-        if (len(file_list) == 0):
-            return False
-        return file_list[0]
+        return file_list
     
     def go_to_folder_and_list(self, folder_id : str, list_files = True, list_folders = True) -> list | bool:
         """Lists files and folders inside 'folder_id'.\n
@@ -193,33 +192,57 @@ class Drive_IO():
             return False
         return file_list
     
+    def create_file(self, title : str, content : str, overwrite_ok = False) -> CloudFile:
+        """Creates a file on the current working folder with content specified.\n
+        If overwrite_ok == False, will raise if there is already a file with the specified name."""
 
-    def upload_file(self, file : str | LocalFile, exist_ok = False) -> GoogleDriveFile:
-        """Uploads a local file to the current working folder.\n
-        If exist_ok == False and there is a file with the same name, will throw FileExistsError.\n
-        Returns a GoogleDriveFile instance."""
-        if (not isinstance(file, LocalFile)):
-            f = LocalFile(file)
-            return self.upload_file(f)        
-
-        exists = self.search_files_in_folder(file.title)
-        if (exists and not exist_ok):
-            raise FileExistsError(f"A file named '{file.title}' already exists in the working folder.")
-
-        stat = file.stat
-        modified_on = datetime.fromtimestamp(stat.st_mtime, timezone.utc).isoformat()
+        exists = self.search_in_folder(title)
+        if (exists):
+            if (not overwrite_ok):
+                raise FileExistsError(f"A file named '{title}' already exists in the working folder.")
+            for f in exists:
+                self.delete_file(f)
 
         metadata = {
-            "title" : file.title,
-            "parents" : [{"id" : self.current_folder}],
-            "modifiedDate" : modified_on
-            }
-        d_file = self.drive.CreateFile(metadata)
-        d_file.SetContentFile(file.path)
+        "title" : title,
+        "parents" : [{"id" : self.current_folder}],
+        }
+        file = self.drive.CreateFile(metadata)
+        file.SetContentString(content)               
+        file.Upload()
+        return self.CloudFile(file)
+
+    def upload_file(self, file : str | LocalFile, overwrite_ok = False) -> CloudFile:
+        """Uploads a local file to the current working folder.\n
+        If overwrite_ok == False and there is a file with the same name, will throw FileExistsError.\n
+        Returns a CloudFile instance."""
+        if (not isinstance(file, LocalFile)):
+            f = LocalFile(file)
+            return self.upload_file(f, overwrite_ok)        
+
+        exists = self.search_in_folder(file.title)
+        if (exists):
+            if (not overwrite_ok):
+                raise FileExistsError(f"A file named '{file.title}' already exists in the working folder.")
+            for f in exists:
+                self.delete_file(f)
+        
+        stat = file.stat
+        modified_on = datetime.fromtimestamp(stat.st_mtime, timezone.utc).isoformat()
+ 
         print(f"Uploading {file.title}...", end=" ")
+
+        metadata = {
+        "title" : file.title,
+        "parents" : [{"id" : self.current_folder}],
+        "modifiedDate" : modified_on
+        }
+        d_file = self.drive.CreateFile(metadata)
+        d_file.SetContentFile(file._file)                
         d_file.Upload()
+        
         print(f"Done.")
-        return d_file
+        return Drive_IO.CloudFile(d_file)
 
     def trash_file(self, file : GoogleDriveFile | CloudFile, to_delete = False):
         """Sends to trash or deletes given file, according to 'to_delete'."""
@@ -235,9 +258,9 @@ class Drive_IO():
         Syntactic sugar for trash_file(file, True)"""
         return self.trash_file(file, True)
     
-    def upload_folder(self, folder : str | LocalFolder) -> bool:
+    def upload_folder(self, folder : str | LocalFolder) -> CloudFolder:
         """Uploads a local folder in its entirety to the current working folder.
-         Returns a GoogleDriveFile instance or False on fail."""
+         Returns a Drive_IO.CloudFolder instance."""
         # TODO time elapsed during upload
         if (not isinstance(folder, LocalFolder)):
             f = LocalFolder(folder)
@@ -248,7 +271,7 @@ class Drive_IO():
         if (exists):
             raise ApiRequestError(f"Folder '{folder.title}' already exists on current working folder.")
         
-        self.create_folder(folder.title, True)
+        cloud_folder = self.create_folder(folder.title, True)
         for file in folder.file_list:
             self.upload_file(file)
 
@@ -258,6 +281,8 @@ class Drive_IO():
 
         self._f_id = working_folder 
         # Returns Drive_IO to the previous working directory after any possible recursions.
+
+        return Drive_IO.CloudFolder(cloud_folder)
         
     def trash_folder(self, folder : GoogleDriveFile | CloudFolder, to_delete = False):
         """Sends to trash or deletes given folder (including children files and folders), according to 'to_delete'."""
@@ -274,7 +299,7 @@ class Drive_IO():
         return self.trash_folder(folder, True)
 
     @staticmethod
-    def compare_files(file1 : LocalFile | CloudFile, file2: LocalFile | CloudFile) -> int:
+    def compare_files(file1 : str | LocalFile | CloudFile, file2: str | LocalFile | CloudFile) -> int:
         """Returns:\n
         -1 = files are different.\n
         0 = files are exactly the same.\n
@@ -282,6 +307,16 @@ class Drive_IO():
         2 = file2 is newer version of file1.
             
         Note that the comparison is based on name and date of modification only."""
+
+        if (isinstance(file1, (str, Path))):
+            file1 = LocalFile(file1)
+        elif (isinstance(file1, GoogleDriveFile)):
+            file1 = Drive_IO.CloudFile(file1)
+
+        if (isinstance(file2, (str, Path))):
+            file2 = LocalFile(file2)
+        elif (isinstance(file2, GoogleDriveFile)):
+            file2 = Drive_IO.CloudFile(file2)
 
         if (file1.title != file2.title):
             return -1
@@ -292,7 +327,7 @@ class Drive_IO():
         if (file1_modified == file2_modified):
             return 0
         
-        ACCEPTABLE_DIFFERENCE = timedelta(microseconds = 5000)
+        ACCEPTABLE_DIFFERENCE = timedelta(microseconds = 2000)
         """Google Drive shaves off a few microseconds of the modified on date during upload."""
         diff = abs(file1_modified - file2_modified)
         if (diff <= ACCEPTABLE_DIFFERENCE):

@@ -6,12 +6,12 @@ class LocalFile():
     """An encapsulation of a pathlib.Path, for efficiency and readability. Specialized to deal with files."""
 
     def __init__(self, path : str | Path):
-        self.path = Path(path)
+        self._file = Path(path)
 
-        if (self.path.is_dir()):
+        if (self._file.is_dir()):
             raise IsADirectoryError(f"'{path}' is not a file, but a folder.")
 
-        if (not self.path.exists()):
+        if (not self._file.exists()):
             raise FileNotFoundError(f"'{path}' does not exist.")
 
     def __eq__(self, other):
@@ -22,10 +22,10 @@ class LocalFile():
 
     @property
     def stat(self):
-        return self.path.stat()
+        return self._file.stat()
     @property
     def title(self):
-        return self.path.name
+        return self._file.name
     @property
     def size(self):
         return self.stat.st_size
@@ -45,24 +45,24 @@ class LocalFile():
     def __str__(self):
         return f"LocalFile: {self.__repr__()}"
     def __repr__(self):
-        return self.path.__str__()
+        return self._file.__str__()
 
 class LocalFolder():
     """An encapsulation of a pathlib.Path, for efficiency and readability. 
     Specialized to deal with folders."""
     
     def __init__(self, path : str | Path):
-        self.path = Path(path)        
+        self._folder = Path(path)        
 
-        if (self.path.is_file()):
+        if (self._folder.is_file()):
             raise NotADirectoryError(f"'{path}' is not a folder, but a file.")
 
-        if (not self.path.exists()):
+        if (not self._folder.exists()):
             raise FileNotFoundError(f"'{path} is not a valid folder.'")
         
         self.subfolder_list = []
         self.file_list = []
-        for x in self.path.iterdir():
+        for x in self._folder.iterdir():
             if (x.is_dir()):
                 self.subfolder_list.append(LocalFolder(x))
             else:
@@ -74,18 +74,18 @@ class LocalFolder():
         return self.subfolder_list + self.file_list
     @property
     def stat(self):
-        return self.path.stat()
+        return self._folder.stat()
     @property
     def size(self):
         return self.stat.st_size
     @property
     def title(self):
-        return self.path.name
+        return self._folder.name
 
     def __str__(self):
         return f"LocalFolder: {self.__repr__()}"
     def __repr__(self):
-        return self.path.__str__()
+        return self._folder.__str__()
     def simple_repr(self) -> list:
         """Returns a simple representation of the folder: a list with names (including subfolders)."""
         l = []
