@@ -203,16 +203,20 @@ class Drive_IO():
             for f in exists:
                 self.delete_file(f)
 
+        now_isoformat = datetime.now(timezone.utc).isoformat()
+        
         metadata = {
         "title" : title,
         "parents" : [{"id" : self.current_folder}],
+        "createdDate" : now_isoformat,
+        "modifiedDate" : now_isoformat,
         }
         file = self.drive.CreateFile(metadata)
         file.SetContentString(content)               
         file.Upload()
         return self.CloudFile(file)
 
-    def upload_file(self, file : str | LocalFile, overwrite_ok = False) -> CloudFile:
+    def upload_file(self, file : str | Path| LocalFile, overwrite_ok = False) -> CloudFile:
         """Uploads a local file to the current working folder.\n
         If overwrite_ok == False and there is a file with the same name, will throw FileExistsError.\n
         Returns a CloudFile instance."""
@@ -235,7 +239,8 @@ class Drive_IO():
         metadata = {
         "title" : file.title,
         "parents" : [{"id" : self.current_folder}],
-        "modifiedDate" : modified_on
+        "modifiedDate" : modified_on,
+        "createdDate" : modified_on,
         }
         d_file = self.drive.CreateFile(metadata)
         d_file.SetContentFile(file._file)                
